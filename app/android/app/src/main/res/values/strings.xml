@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Day84</string>
+    <string name="title_activity_main">Day84</string>
+    <string name="package_name">com.day84.app</string>
+    <string name="custom_url_scheme">com.day84.app</string>
+</resources>
