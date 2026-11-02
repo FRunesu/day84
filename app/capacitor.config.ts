@@ -18,12 +18,12 @@ const config: CapacitorConfig = {
   appId: "com.day84.app",
   appName: "Day84",
   webDir: "dist",
-  backgroundColor: "#0d1117",
+  backgroundColor: "#000000",
   ios: {
     contentInset: "automatic",
   },
   android: {
-    backgroundColor: "#0d1117",
+    backgroundColor: "#000000",
   },
 };
 
