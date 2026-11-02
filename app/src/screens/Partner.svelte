@@ -124,7 +124,7 @@
 
     <div class="card">
       <div class="lbl">What partners can see</div>
-      <p class="mut" style="margin:0">Today's execution score is always shared. Everything else is off by default unless you turn it on. Enforced on the server, not just hidden in the app.</p>
+      <p class="mut" style="margin:0">Today's execution score is always shared. Streaks and cycle progress are on by default; goal and vision text are off until you turn them on. Enforced on the server, not just hidden in the app.</p>
       <label class="toggle"><span>My streaks</span><input type="checkbox" checked={partner.sharePrefs.shareStreaks} onchange={(e) => updateSharePrefs({ shareStreaks: e.target.checked })} /></label>
       <label class="toggle"><span>My 12-week cycle progress</span><input type="checkbox" checked={partner.sharePrefs.shareCycleProgress} onchange={(e) => updateSharePrefs({ shareCycleProgress: e.target.checked })} /></label>
       <label class="toggle"><span>My 12-week goal text</span><input type="checkbox" checked={partner.sharePrefs.shareGoalText} onchange={(e) => updateSharePrefs({ shareGoalText: e.target.checked })} /></label>
