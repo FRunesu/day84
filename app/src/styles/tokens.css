@@ -1,58 +1,73 @@
 /*
   Day84 — Design Tokens
   ----------------------------------------------------------------
-  Design direction: "mission clock" — an instrument panel for time,
-  not a generic productivity dashboard. The app's signature element
-  is --accent, which is not a fixed brand color: it is computed at
-  runtime (see lib/accentColor.js) from how far the user is through
-  their current 12-week cycle, sliding from cool blue (early, calm)
-  to warm amber/red (late, urgent). The interface itself visibly
-  changes temperature as the cycle burns down — this is the one
-  idea everything else stays quiet around.
+  Direction: black, white and one red. Geist for all text. Cards
+  are flat (no border) on a pure black background; light mode is
+  the same design inverted. Red (#c8232a) is reserved for poor
+  performance: missed chain days, low scores, destructive actions.
+  Everything "good" is white (or black in light mode).
 
-  Typography: numbers ARE the content here (percentages, days left,
-  streak counts), so the numeral face is tabular/monospaced — an
-  instrument-panel readout — while everything else uses the
-  system UI font. Both are system-stack fonts on purpose: this app
-  must work fully offline (PWA + Capacitor native), so we never
-  depend on a font CDN. Native system fonts also make the app feel
-  at home on iOS and Android rather than like a ported web page.
+  The font is bundled locally (public/fonts) so the app works
+  fully offline inside the Capacitor shell.
 */
 
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  /* ---- Surface & ink (fixed, theme-independent) ---- */
-  --bg: #0d1117;
-  --bg-elevated: #161b22;
-  --surface: #1c2330;
-  --surface-hover: #232b3a;
-  --border: #2a3344;
-  --border-strong: #3a4659;
+  --bg: #000000;
+  --bg-elevated: #161616;
+  --surface: #232323;
+  --surface-hover: #2a2a2a;
+  --field: #0d0d0d;
+  --border: #2a2a2a;
+  --border-strong: #3a3a3a;
+  --empty: #2a2a2a;
 
-  --ink: #e6e9ef;
-  --ink-muted: #8b94a7;
-  --ink-faint: #5a6478;
+  --ink: #ffffff;
+  --ink-muted: #a3a3a3;
+  --ink-faint: #6b6b6b;
 
-  /* ---- Accent system (dynamic — see lib/accentColor.js) ----
-     Defaults below are the "early cycle" state; JS overwrites
-     these on :root at runtime as the cycle progresses. */
-  --accent: #4d8eff;
-  --accent-soft: rgba(77, 142, 255, 0.16);
-  --accent-ink: #0d1117;
+  /* "Accent" is now just the foreground colour: white on dark. */
+  --accent: #ffffff;
+  --accent-soft: rgba(255, 255, 255, 0.1);
+  --accent-ink: #000000;
 
-  /* Fixed semantic colors that should NOT shift with the cycle */
-  --success: #3ddc84;
-  --success-soft: rgba(61, 220, 132, 0.14);
-  --danger: #ff5c5c;
-  --danger-soft: rgba(255, 92, 92, 0.14);
-  --warning: #ffb84d;
+  --success: #ffffff;
+  --success-soft: rgba(255, 255, 255, 0.1);
+  --danger: #c8232a;
+  --danger-soft: rgba(200, 35, 42, 0.16);
+  --red-soft: #d9777c;
+  --warning: #a3a3a3;
 
-  /* ---- Type ---- */
-  --font-ui:
-    -apple-system, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
-  --font-numeral:
-    ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo,
-    Consolas, monospace;
+  --font-ui: "Geist", -apple-system, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-numeral: "Geist", -apple-system, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -63,7 +78,6 @@
   --text-3xl: 2.5rem;
   --text-4xl: 3.5rem;
 
-  /* ---- Spacing scale ---- */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -73,23 +87,44 @@
   --space-7: 48px;
   --space-8: 64px;
 
-  /* ---- Shape ---- */
   --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-md: 12px;
+  --radius-lg: 12px;
   --radius-full: 999px;
 
-  /* ---- Motion ---- */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 140ms;
   --duration-base: 260ms;
   --duration-slow: 480ms;
 
-  /* ---- Layout ---- */
   --nav-height: 64px;
-  --max-width: 480px; /* mobile-first hard cap — this is a phone app, not a desktop site */
+  --max-width: 480px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+:root[data-theme="light"] {
+  --bg: #ebebeb;
+  --bg-elevated: #ffffff;
+  --surface: #efefef;
+  --surface-hover: #e4e4e4;
+  --field: #f4f4f4;
+  --border: #d4d4d4;
+  --border-strong: #bdbdbd;
+  --empty: #d6d6d6;
+
+  --ink: #000000;
+  --ink-muted: #666666;
+  --ink-faint: #999999;
+
+  --accent: #000000;
+  --accent-soft: rgba(0, 0, 0, 0.08);
+  --accent-ink: #ffffff;
+
+  --success: #000000;
+  --success-soft: rgba(0, 0, 0, 0.08);
+  --danger-soft: rgba(200, 35, 42, 0.12);
+  --warning: #666666;
 }
 
 * {
@@ -106,6 +141,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+  font-feature-settings: "tnum";
 }
 
 #app {
@@ -128,16 +164,63 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--ink-muted);
   outline-offset: 2px;
 }
 
 input,
-textarea {
+textarea,
+select {
   font-family: inherit;
   color: var(--ink);
-  background: var(--surface);
+  background: var(--bg-elevated);
   border: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+/* Native checkboxes used as toggles across Settings/Partner: white when on. */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--empty);
+  border: none;
+  position: relative;
+  flex-shrink: 0;
+  transition: background var(--duration-fast);
+  cursor: pointer;
+}
+input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  transition: left var(--duration-fast), background var(--duration-fast);
+}
+input[type="checkbox"]:checked {
+  background: var(--ink);
+}
+input[type="checkbox"]:checked::after {
+  left: 19px;
+  background: var(--accent-ink);
 }
 
 ::selection {
@@ -157,6 +240,7 @@ textarea {
   font-family: var(--font-numeral);
   font-feature-settings: "tnum";
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .sr-only {

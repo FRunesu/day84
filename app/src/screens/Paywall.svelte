@@ -10,7 +10,7 @@
   async function simulatePurchase(plan) {
     purchasing = true;
     await new Promise((r) => setTimeout(r, 600));
-    setSubscriptionActive(true);
+    await setSubscriptionActive(true);
     purchasing = false;
     showScreen(SCREENS.PARTNER);
   }

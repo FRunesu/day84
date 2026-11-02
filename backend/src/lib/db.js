@@ -1,32 +1,30 @@
 /**
  * Day84 Backend — Data Layer
  * ------------------------------------------------------------------
- * DEV/DEMO IMPLEMENTATION: this uses a JSON file on disk so the
- * whole backend runs with zero external dependencies and is easy
- * to read end-to-end. It is NOT what should be running in
- * production — swap this module for a real managed database
- * (Postgres via `pg` or an ORM like Prisma/Drizzle) before
- * shipping. Every function below is written as a small, named,
- * already-async unit specifically so that swap is a drop-in:
- * nothing outside this file should need to change.
+ * DEV/DEMO IMPLEMENTATION: a JSON file on disk so the whole backend
+ * runs with zero external dependencies. Swap this module for a real
+ * managed database before shipping at scale; every function is a
+ * small async unit so that swap is a drop-in.
  *
- * Tables (see schema.sql for the production Postgres equivalent):
- *   users       — minimal identity record (id, name, email)
+ * Tables (see schema.sql for the Postgres equivalent):
  *   invites     — { id, token, inviterId, inviterName, recipientEmail, status, createdAt, expiresAt }
- *   links       — { id, userAId, userBId, createdAt }  (one row = one active partnership)
- *   sharedData  — keyed by userId: { sharePrefs, streaks, cycleProgress, goalText, visionText, updatedAt }
+ *   links       — { id, userAId, userAName, userBId, userBName, createdAt }  (one row = one partnership)
+ *   sharedData  — keyed by userId: { userName, sharePrefs, streaks, bestStreak, dayScore, cycleProgress, goalText, visionText, updatedAt }
+ *   pushes      — { id, fromId, fromName, toId, createdAt }  (removed once delivered)
  */
 
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { readFile, writeFile, mkdir, rename } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, "../../data");
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "../../data");
 const DATA_FILE = path.join(DATA_DIR, "db.json");
 
-const EMPTY_DB = { invites: [], links: [], sharedData: {} };
+export const MAX_PARTNERS = 6;
+
+const EMPTY_DB = { invites: [], links: [], sharedData: {}, pushes: [] };
 
 async function ensureDataFile() {
   if (!existsSync(DATA_DIR)) await mkdir(DATA_DIR, { recursive: true });
@@ -34,22 +32,46 @@ async function ensureDataFile() {
 }
 
 async function readDb() {
-  await ensureDataFile();
-  const raw = await readFile(DATA_FILE, "utf-8");
-  return JSON.parse(raw);
+  return serialized(readDbNow);
 }
 
+async function readDbNow() {
+  await ensureDataFile();
+  const raw = await readFile(DATA_FILE, "utf-8");
+  const db = JSON.parse(raw);
+  for (const k of Object.keys(EMPTY_DB)) if (db[k] === undefined) db[k] = structuredClone(EMPTY_DB[k]);
+  return db;
+}
+
+// Atomic write (temp file + rename) so a concurrent reader never sees a
+// half-written file; plus a simple queue so read-modify-write sequences
+// from concurrent requests don't clobber each other.
 async function writeDb(db) {
-  await writeFile(DATA_FILE, JSON.stringify(db, null, 2));
+  const tmp = `${DATA_FILE}.${process.pid}.${Date.now()}.tmp`;
+  await writeFile(tmp, JSON.stringify(db, null, 2));
+  await rename(tmp, DATA_FILE);
+}
+
+let queue = Promise.resolve();
+function serialized(fn) {
+  const run = queue.then(fn, fn);
+  queue = run.catch(() => {});
+  return run;
+}
+
+async function mutate(fn) {
+  return serialized(async () => {
+    const db = await readDbNow();
+    const result = await fn(db);
+    await writeDb(db);
+    return result;
+  });
 }
 
 // ---- Invites ----
 
 export async function createInvite(invite) {
-  const db = await readDb();
-  db.invites.push(invite);
-  await writeDb(db);
-  return invite;
+  return mutate((db) => { db.invites.push(invite); return invite; });
 }
 
 export async function findInviteByToken(token) {
@@ -57,54 +79,90 @@ export async function findInviteByToken(token) {
   return db.invites.find((i) => i.token === token) || null;
 }
 
-export async function updateInviteStatus(token, status) {
+export async function findInvitesByInviter(inviterId) {
   const db = await readDb();
-  const invite = db.invites.find((i) => i.token === token);
-  if (invite) {
-    invite.status = status;
-    await writeDb(db);
-  }
-  return invite || null;
+  return db.invites.filter((i) => i.inviterId === inviterId);
+}
+
+export async function updateInviteStatus(token, status, patch = {}) {
+  return mutate((db) => {
+    const invite = db.invites.find((i) => i.token === token);
+    if (invite) Object.assign(invite, patch, { status });
+    return invite || null;
+  });
 }
 
 // ---- Links (partnerships) ----
 
-export async function createLink(userAId, userBId) {
-  const db = await readDb();
-  // Enforce one active partner per user for this version of the
-  // product (matches the spec: "a partner", singular).
-  db.links = db.links.filter((l) => l.userAId !== userAId && l.userBId !== userAId);
-  const link = { id: `${userAId}:${userBId}:${Date.now()}`, userAId, userBId, createdAt: new Date().toISOString() };
-  db.links.push(link);
-  await writeDb(db);
-  return link;
+function involves(link, userId) {
+  return link.userAId === userId || link.userBId === userId;
 }
 
-export async function findLinkForUser(userId) {
+export async function createLink(a, b) {
+  return mutate((db) => {
+    const exists = db.links.find((l) => involves(l, a.id) && involves(l, b.id));
+    if (exists) return exists;
+    const link = {
+      id: `${a.id}:${b.id}:${Date.now()}`,
+      userAId: a.id,
+      userAName: a.name,
+      userBId: b.id,
+      userBName: b.name,
+      createdAt: new Date().toISOString(),
+    };
+    db.links.push(link);
+    return link;
+  });
+}
+
+export async function findLinksForUser(userId) {
   const db = await readDb();
-  return db.links.find((l) => l.userAId === userId || l.userBId === userId) || null;
+  return db.links.filter((l) => involves(l, userId));
+}
+
+export async function countLinksForUser(userId) {
+  return (await findLinksForUser(userId)).length;
+}
+
+export async function removeLink(userId, partnerId) {
+  return mutate((db) => {
+    const before = db.links.length;
+    db.links = db.links.filter((l) => !(involves(l, userId) && involves(l, partnerId)));
+    db.pushes = db.pushes.filter((p) => !((p.fromId === userId && p.toId === partnerId) || (p.fromId === partnerId && p.toId === userId)));
+    return before !== db.links.length;
+  });
 }
 
 export async function removeLinksForUser(userId) {
-  const db = await readDb();
-  const before = db.links.length;
-  db.links = db.links.filter((l) => l.userAId !== userId && l.userBId !== userId);
-  await writeDb(db);
-  return before !== db.links.length;
+  return mutate((db) => {
+    const before = db.links.length;
+    db.links = db.links.filter((l) => !involves(l, userId));
+    db.pushes = db.pushes.filter((p) => p.fromId !== userId && p.toId !== userId);
+    return before !== db.links.length;
+  });
 }
 
-export function partnerIdFromLink(link, selfId) {
+export function partnerFromLink(link, selfId) {
   if (!link) return null;
-  return link.userAId === selfId ? link.userBId : link.userAId;
+  return link.userAId === selfId
+    ? { id: link.userBId, name: link.userBName }
+    : { id: link.userAId, name: link.userAName };
 }
 
 // ---- Shared data (the privacy-filtered sync payload) ----
 
 export async function upsertSharedData(userId, payload) {
-  const db = await readDb();
-  db.sharedData[userId] = { ...payload, updatedAt: new Date().toISOString() };
-  await writeDb(db);
-  return db.sharedData[userId];
+  return mutate((db) => {
+    db.sharedData[userId] = { ...payload, updatedAt: new Date().toISOString() };
+    // Keep the display name on every link current too.
+    if (payload.userName) {
+      for (const l of db.links) {
+        if (l.userAId === userId) l.userAName = payload.userName;
+        if (l.userBId === userId) l.userBName = payload.userName;
+      }
+    }
+    return db.sharedData[userId];
+  });
 }
 
 export async function getSharedData(userId) {
@@ -113,22 +171,37 @@ export async function getSharedData(userId) {
 }
 
 export async function deleteSharedData(userId) {
+  return mutate((db) => { delete db.sharedData[userId]; });
+}
+
+// ---- Pushes ("Push <partner>") ----
+
+export async function createPush(push) {
+  return mutate((db) => { db.pushes.push(push); return push; });
+}
+
+/** Returns and removes every pending push addressed to this user. */
+export async function takePushesFor(userId) {
+  return mutate((db) => {
+    const mine = db.pushes.filter((p) => p.toId === userId);
+    db.pushes = db.pushes.filter((p) => p.toId !== userId);
+    return mine;
+  });
+}
+
+export async function recentPushCount(fromId, toId, windowMs) {
   const db = await readDb();
-  delete db.sharedData[userId];
-  await writeDb(db);
+  const since = Date.now() - windowMs;
+  return db.pushes.filter((p) => p.fromId === fromId && p.toId === toId && new Date(p.createdAt).getTime() > since).length;
 }
 
 // ---- Full account deletion cascade ----
 
-/**
- * The product rule: deleting an account removes the user's shared
- * data AND immediately breaks/clears the link to their partner, in
- * one operation — no orphaned partner view left behind.
- */
 export async function deleteAccountCascade(userId) {
-  const db = await readDb();
-  delete db.sharedData[userId];
-  db.links = db.links.filter((l) => l.userAId !== userId && l.userBId !== userId);
-  db.invites = db.invites.filter((i) => i.inviterId !== userId);
-  await writeDb(db);
+  return mutate((db) => {
+    delete db.sharedData[userId];
+    db.links = db.links.filter((l) => !involves(l, userId));
+    db.invites = db.invites.filter((i) => i.inviterId !== userId);
+    db.pushes = db.pushes.filter((p) => p.fromId !== userId && p.toId !== userId);
+  });
 }

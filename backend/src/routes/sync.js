@@ -1,50 +1,57 @@
 import { Router } from "express";
-import { upsertSharedData, getSharedData, findLinkForUser, partnerIdFromLink } from "../lib/db.js";
+import { upsertSharedData, getSharedData, findLinksForUser, partnerFromLink } from "../lib/db.js";
 
 const router = Router();
 
 /**
  * I push my full current state + my sharePrefs choices. Storing the
- * unfiltered data here is fine — the filtering happens on READ
- * (below), based on the OWNER's sharePrefs, not the reader's.
+ * unfiltered data is fine — filtering happens on READ, based on the
+ * OWNER's sharePrefs, not the reader's.
  */
 router.post("/sync/push", async (req, res) => {
-  const { userId, sharePrefs, streaks, cycleProgress, goalText, visionText } = req.body;
+  const { userId, userName, sharePrefs, streaks, bestStreak, dayScore, dayPlanned, dayCompleted, cycleProgress, cycleDay, goalText, visionText } = req.body;
   if (!userId) return res.status(400).json({ error: "userId is required." });
 
-  const saved = await upsertSharedData(userId, { sharePrefs, streaks, cycleProgress, goalText, visionText });
+  const saved = await upsertSharedData(userId, {
+    userName, sharePrefs, streaks, bestStreak, dayScore, dayPlanned, dayCompleted, cycleProgress, cycleDay, goalText, visionText,
+  });
   return res.json({ saved: true, updatedAt: saved.updatedAt });
 });
 
-/**
- * THIS is the privacy enforcement point referenced throughout the
- * spec: a field the owner has not opted to share is simply never
- * included in the response — not sent-then-hidden client-side. A
- * technically curious partner inspecting network traffic sees
- * exactly what they're allowed to see, nothing more.
- */
-router.get("/sync/partner/:userId", async (req, res) => {
+/** Only the fields the owner opted to share ever leave the server. */
+function filterShared(data) {
+  if (!data) return { updatedAt: null };
+  const prefs = data.sharePrefs || {};
+  const out = {
+    // Today's execution score is the one thing every partner always sees.
+    dayScore: data.dayScore ?? null,
+    dayPlanned: data.dayPlanned ?? null,
+    dayCompleted: data.dayCompleted ?? null,
+    updatedAt: data.updatedAt,
+  };
+  if (prefs.shareStreaks) { out.streaks = data.streaks ?? 0; out.bestStreak = data.bestStreak ?? 0; }
+  if (prefs.shareCycleProgress) { out.cycleProgress = data.cycleProgress ?? 0; out.cycleDay = data.cycleDay ?? null; }
+  if (prefs.shareGoalText) out.goalText = data.goalText ?? "";
+  if (prefs.shareVisionText) out.visionText = data.visionText ?? "";
+  return out;
+}
+
+/** Everyone I'm linked with, each with whatever they share with me. */
+router.get("/sync/partners/:userId", async (req, res) => {
   const { userId } = req.params;
-
-  const link = await findLinkForUser(userId);
-  if (!link) {
-    return res.json({}); // not linked to anyone — nothing to show
+  const links = await findLinksForUser(userId);
+  const partners = [];
+  for (const link of links) {
+    const p = partnerFromLink(link, userId);
+    const data = await getSharedData(p.id);
+    partners.push({
+      partnerId: p.id,
+      partnerName: data?.userName || p.name,
+      linkedDate: link.createdAt,
+      data: filterShared(data),
+    });
   }
-
-  const partnerId = partnerIdFromLink(link, userId);
-  const partnerData = await getSharedData(partnerId);
-  if (!partnerData) {
-    return res.json({});
-  }
-
-  const prefs = partnerData.sharePrefs || {};
-  const filtered = {};
-  if (prefs.shareStreaks) filtered.streaks = partnerData.streaks;
-  if (prefs.shareCycleProgress) filtered.cycleProgress = partnerData.cycleProgress;
-  if (prefs.shareGoalText) filtered.goalText = partnerData.goalText;
-  if (prefs.shareVisionText) filtered.visionText = partnerData.visionText;
-
-  return res.json(filtered);
+  return res.json(partners);
 });
 
 export default router;
