@@ -16,7 +16,7 @@
       .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`Couldn't load (${r.status})`))))
       .then((text) => {
         const parsed = new DOMParser().parseFromString(text, "text/html");
-        parsed.querySelectorAll("style, script, nav, header").forEach((n) => n.remove());
+        parsed.querySelectorAll("style, script, nav, header, button").forEach((n) => n.remove());
         parsed.querySelectorAll("a").forEach((a) => { if (/^\s*(←|&larr;)?\s*back/i.test(a.textContent)) a.remove(); });
         parsed.querySelectorAll("[style]").forEach((n) => n.removeAttribute("style"));
         html = parsed.body.innerHTML;
