@@ -7,11 +7,11 @@
   import { loadGoals } from "./stores/goals.svelte.js";
   import { loadCycleReviews } from "./stores/cycleReview.svelte.js";
   import { loadPartnerState } from "./stores/partner.svelte.js";
+  import { loadTheme } from "./stores/theme.svelte.js";
 
   import NavBar from "./components/NavBar.svelte";
   import Onboarding from "./screens/Onboarding.svelte";
   import Dashboard from "./screens/Dashboard.svelte";
-  import Today from "./screens/Today.svelte";
   import Goals from "./screens/Goals.svelte";
   import Vision from "./screens/Vision.svelte";
   import CycleReview from "./screens/CycleReview.svelte";
@@ -20,6 +20,8 @@
   import Settings from "./screens/Settings.svelte";
   import Partner from "./screens/Partner.svelte";
   import Paywall from "./screens/Paywall.svelte";
+  import PartnerStats from "./screens/PartnerStats.svelte";
+  import Legal from "./screens/Legal.svelte";
 
   const router = routerState();
   const user = userState();
@@ -27,11 +29,12 @@
   let ready = $state(false);
 
   const NAV_SCREENS = new Set([
-    SCREENS.DASHBOARD, SCREENS.TODAY, SCREENS.GOALS, SCREENS.VISION, SCREENS.SETTINGS
+    SCREENS.DASHBOARD, SCREENS.GOALS, SCREENS.VISION, SCREENS.SETTINGS
   ]);
 
   onMount(async () => {
     await Promise.all([
+      loadTheme(),
       loadUser(),
       loadIdentity(),
       loadPeriod(),
@@ -40,6 +43,13 @@
       loadPartnerState(),
     ]);
     ready = true;
+
+    // Invite link opened in the browser (yourdomain/invite/<code>): prefill the code.
+    const m = window.location.pathname.match(/^\/invite\/([A-Za-z0-9_-]+)/);
+    if (m) {
+      history.replaceState(null, "", "/");
+      showScreen(SCREENS.PARTNER, { inviteCode: m[1] });
+    }
 
     const isNativeBuild = window.Capacitor?.isNativePlatform?.();
     if (!isNativeBuild && "serviceWorker" in navigator) {
@@ -56,7 +66,6 @@
   <Onboarding />
 {:else}
   {#if router.screen === SCREENS.DASHBOARD}    <Dashboard />
-  {:else if router.screen === SCREENS.TODAY}   <Today />
   {:else if router.screen === SCREENS.GOALS}   <Goals />
   {:else if router.screen === SCREENS.VISION}  <Vision />
   {:else if router.screen === SCREENS.SETTINGS}<Settings />
@@ -65,6 +74,8 @@
   {:else if router.screen === SCREENS.YEAR_REVIEW}  <YearInReview />
   {:else if router.screen === SCREENS.PARTNER} <Partner />
   {:else if router.screen === SCREENS.PAYWALL} <Paywall />
+  {:else if router.screen === SCREENS.PARTNER_STATS} <PartnerStats />
+  {:else if router.screen === SCREENS.LEGAL} <Legal />
   {/if}
 
   {#if NAV_SCREENS.has(router.screen)}
@@ -76,5 +87,5 @@
   .boot-screen {
     min-height: 100vh; display: flex; align-items: center; justify-content: center;
   }
-  .boot-numeral { font-size: var(--text-4xl); font-weight: 700; color: var(--accent); opacity: 0.6; }
+  .boot-numeral { font-size: var(--text-4xl); font-weight: 700; color: var(--ink); letter-spacing: -0.04em; }
 </style>

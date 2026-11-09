@@ -4,6 +4,14 @@
   import { routerState, openModal, closeModal, updateModalDraft, clearModalDraft } from "../stores/router.svelte.js";
   import Modal from "../components/Modal.svelte";
   import { DAY_NAMES } from "../lib/schema.js";
+  import { periodState } from "../stores/period.svelte.js";
+  import { chainDays, chainStats } from "../lib/chain.js";
+  import ChainGrid from "../components/ChainGrid.svelte";
+
+  const per = periodState();
+  const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+  const days = $derived(per.period ? chainDays(per.period.startDate, gs.tactics, gs.completions) : []);
+  const chain = $derived(chainStats(days));
 
   const gs = goalsState();
   const id = identityState();
@@ -68,9 +76,24 @@
   <header class="screen-header">
     <h1>Goals & Tasks</h1>
     {#if gs.goals.length < 4}
-      <button class="add-btn" onclick={() => (addingGoal = true)}>+</button>
+      <button class="add-btn" onclick={() => (addingGoal = true)} aria-label="Add goal"><span>+</span></button>
     {/if}
   </header>
+
+  {#if per.period}
+    <section class="chain-card">
+      <div class="chain-hd">
+        <span class="chain-title">Unbroken chain</span>
+        <span class="chain-meta"><b class="numeral">{chain.current}</b> current · <b class="numeral">{chain.best}</b> best</span>
+      </div>
+      <ChainGrid {days} />
+      <div class="legend">
+        <span><i class="sw done"></i>Done</span>
+        <span><i class="sw miss"></i>Missed</span>
+        <span><i class="sw rest"></i>Nothing planned</span>
+      </div>
+    </section>
+  {/if}
 
   {#if addingGoal}
     <div class="add-goal-card">
@@ -131,11 +154,11 @@
                   <div class="tactic-info">
                     <span class="tactic-name">{tactic.title}</span>
                     <div class="tactic-meta-row">
-                      {#each DAY_NAMES as d, i}
-                        {#if tactic.days.includes(i)}<span class="day-badge">{d}</span>{/if}
-                      {/each}
-                      {#if tactic.trackStreak}<span class="option-badge">🔥 Streak</span>{/if}
-                      {#if tactic.startTime}<span class="option-badge">⏰ {tactic.startTime}</span>{/if}
+                      <span class="days">
+                        {#each DAY_LETTERS as d, i}<span class="day-letter" class:sel={tactic.days.includes(i)}>{d}</span>{/each}
+                      </span>
+                      {#if tactic.trackStreak}<span class="option-badge">Streak{tactic.streak ? ` · ${tactic.streak}d` : ""}</span>{/if}
+                      {#if tactic.startTime}<span class="option-badge">{tactic.startTime}</span>{/if}
                     </div>
                   </div>
                   <div class="tactic-actions">
@@ -204,67 +227,78 @@
 
 <style>
   .goals-screen {
-    padding: calc(var(--space-5) + var(--safe-top)) var(--space-5) calc(var(--nav-height) + var(--space-6));
-    display: flex; flex-direction: column; gap: var(--space-4);
+    padding: calc(var(--space-4) + var(--safe-top)) var(--space-4) calc(var(--nav-height) + var(--space-6));
+    display: flex; flex-direction: column; gap: var(--space-3);
   }
+  .chain-card { background: var(--bg-elevated); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .chain-hd { display: flex; justify-content: space-between; align-items: baseline; }
+  .chain-title { font-size: var(--text-sm); font-weight: 600; }
+  .chain-meta { font-size: var(--text-xs); color: var(--ink-muted); }
+  .chain-meta b { color: var(--ink); }
+  .legend { display: flex; gap: var(--space-3); font-size: 10px; color: var(--ink-muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .sw { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+  .sw.done { background: var(--ink); }
+  .sw.miss { border: 1.5px solid var(--danger); }
+  .sw.rest { background: var(--empty); }
+  .days { display: inline-flex; gap: 3px; }
+  .day-letter { width: 16px; height: 16px; border-radius: 3px; font-size: 9px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-faint); background: var(--surface); }
+  .day-letter.sel { color: var(--red-soft); background: var(--danger-soft); }
   .screen-header { display: flex; justify-content: space-between; align-items: center; }
   h1 { font-size: var(--text-xl); margin: 0; }
-  .add-btn { width: 36px; height: 36px; border-radius: var(--radius-full); background: var(--accent); color: var(--accent-ink); font-size: var(--text-xl); font-weight: 600; }
+  .add-btn { width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--bg-elevated); color: var(--ink); font-size: 20px; font-weight: 500; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .add-btn span { line-height: 1; transform: translateY(-1px); }
 
-  .add-goal-card { background: var(--bg-elevated); border: 1px solid var(--accent); border-radius: var(--radius-lg); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .add-goal-card { background: var(--bg-elevated); border-radius: var(--radius-md); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
   .field-label { font-size: var(--text-sm); font-weight: 600; color: var(--ink-muted); display: block; }
-  .add-goal-card input, .add-goal-card select { padding: var(--space-3); border-radius: var(--radius-md); font-size: var(--text-base); background: var(--surface); border: 1px solid var(--border); color: var(--ink); width: 100%; }
+  .add-goal-card input, .add-goal-card select { padding: var(--space-3); border-radius: 10px; font-size: var(--text-sm); background: var(--field); border: 1px solid var(--border); color: var(--ink); width: 100%; }
   .add-goal-actions { display: flex; justify-content: flex-end; gap: var(--space-3); }
-  .btn-accent-sm { background: var(--accent); color: var(--accent-ink); font-weight: 600; padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); font-size: var(--text-sm); }
+  .btn-accent-sm { background: var(--accent); color: var(--accent-ink); font-weight: 500; padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); font-size: var(--text-sm); }
   .btn-accent-sm:disabled { opacity: 0.4; }
   .btn-ghost-sm { color: var(--ink-muted); font-size: var(--text-sm); padding: var(--space-2) var(--space-3); }
 
   .goal-list { display: flex; flex-direction: column; gap: var(--space-3); }
-  .goal-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-  .goal-header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-5); text-align: left; }
+  .goal-card { background: var(--bg-elevated); border-radius: var(--radius-md); overflow: hidden; }
+  .goal-header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: var(--space-4); text-align: left; }
   .goal-header-left { display: flex; flex-direction: column; gap: 4px; }
-  .goal-title { font-size: var(--text-base); font-weight: 600; color: var(--ink); }
-  .vision-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); background: var(--accent-soft); padding: 2px 6px; border-radius: var(--radius-full); align-self: flex-start; }
+  .goal-title { font-size: var(--text-sm); font-weight: 600; color: var(--ink); }
+  .vision-tag { font-size: 10px; font-weight: 600; color: var(--ink-muted); background: var(--surface); padding: 2px 6px; border-radius: var(--radius-full); align-self: flex-start; }
   .goal-meta { display: flex; align-items: center; gap: var(--space-3); }
   .tactic-count { font-size: var(--text-xs); color: var(--ink-faint); }
   .chevron { font-size: var(--text-xs); color: var(--ink-muted); }
 
-  .goal-body { border-top: 1px solid var(--border); padding: var(--space-3) var(--space-5) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
-  .tactic-row { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); }
+  .goal-body { border-top: 1px solid var(--border); padding: 0 var(--space-4) var(--space-3); display: flex; flex-direction: column; }
+  .tactic-row { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+  .tactic-row:last-of-type { border-bottom: none; }
   .tactic-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   .tactic-name { font-size: var(--text-sm); color: var(--ink); }
-  .tactic-meta-row { display: flex; flex-wrap: wrap; gap: 4px; }
-  .day-badge { font-size: 10px; font-weight: 700; background: var(--accent-soft); color: var(--accent); padding: 2px 6px; border-radius: var(--radius-full); }
-  .option-badge { font-size: 10px; color: var(--ink-faint); background: var(--surface); padding: 2px 6px; border-radius: var(--radius-full); }
+  .tactic-meta-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .option-badge { font-size: 10px; color: var(--ink-muted); }
   .tactic-actions { display: flex; gap: var(--space-2); }
   .icon-btn { color: var(--ink-muted); font-size: var(--text-sm); padding: var(--space-1) var(--space-2); }
   .icon-btn.danger:hover { color: var(--danger); }
 
-  .goal-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: var(--space-3); margin-top: var(--space-1); }
-  .add-tactic-btn { color: var(--accent); font-size: var(--text-sm); font-weight: 600; }
-  .delete-goal-btn { color: var(--danger); font-size: var(--text-xs); opacity: 0.7; }
+  .goal-footer { display: flex; justify-content: space-between; align-items: center; padding-top: var(--space-3); }
+  .add-tactic-btn { color: var(--ink); font-size: var(--text-sm); font-weight: 500; }
+  .delete-goal-btn { color: var(--danger); font-size: var(--text-xs); }
 
   /* Tactic modal form */
   .tactic-form { display: flex; flex-direction: column; gap: var(--space-4); }
   .tactic-form label { display: flex; flex-direction: column; gap: var(--space-2); }
   .form-label { font-size: var(--text-sm); font-weight: 600; color: var(--ink-muted); }
   .form-hint { font-size: var(--text-xs); color: var(--ink-faint); line-height: 1.5; }
-  .tactic-form input[type="text"], .tactic-form input[type="time"] { padding: var(--space-3); border-radius: var(--radius-md); font-size: var(--text-base); background: var(--surface); border: 1px solid var(--border); color: var(--ink); }
+  .tactic-form input[type="text"], .tactic-form input[type="time"] { padding: var(--space-3); border-radius: 10px; font-size: var(--text-sm); background: var(--field); border: 1px solid var(--border); color: var(--ink); }
   .day-picker { display: flex; flex-direction: column; gap: var(--space-2); }
   .day-toggles { display: flex; gap: var(--space-2); }
-  .day-toggle { flex: 1; padding: var(--space-2) 0; border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: 700; background: var(--surface); border: 1px solid var(--border); color: var(--ink-muted); transition: all var(--duration-fast) var(--ease-out); }
-  .day-toggle.selected { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .day-toggle { flex: 1; padding: var(--space-2) 0; border-radius: var(--radius-sm); font-size: 11px; font-weight: 500; background: none; border: 1px solid var(--border); color: var(--ink-muted); transition: all var(--duration-fast) var(--ease-out); }
+  .day-toggle.selected { background: var(--ink); border-color: var(--ink); color: var(--accent-ink); font-weight: 600; }
 
   .toggle-field { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); }
   .toggle-text { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-  .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; margin-top: 2px; }
-  .switch input { opacity: 0; width: 0; height: 0; }
-  .slider { position: absolute; cursor: pointer; inset: 0; background: var(--border-strong); border-radius: var(--radius-full); transition: 0.2s; }
-  .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
-  .switch input:checked + .slider { background: var(--accent); }
-  .switch input:checked + .slider:before { transform: translateX(20px); }
+  .switch { display: flex; align-items: center; flex-shrink: 0; margin-top: 2px; }
+  .slider { display: none; }
 
-  .save-btn { background: var(--accent); color: var(--accent-ink); font-weight: 600; padding: var(--space-4); border-radius: var(--radius-md); }
+  .save-btn { background: var(--accent); color: var(--accent-ink); font-weight: 500; padding: var(--space-3); border-radius: var(--radius-sm); font-size: var(--text-sm); }
 
   .empty-state { text-align: center; padding: var(--space-7) var(--space-4); color: var(--ink-muted); }
   .hint { font-size: var(--text-sm); color: var(--ink-faint); }

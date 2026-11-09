@@ -32,9 +32,11 @@ function buildInviteEmail({ inviterName, token, recipientEmail }) {
         <h2>${inviterName} wants you as their accountability partner</h2>
         <p>Day84 helps people break a year into focused 12-week cycles and stay honest about how much time is actually left. ${inviterName} is inviting you to link up so you can both stay on track.</p>
         <p style="margin: 24px 0;">
-          <a href="${APP_DOWNLOAD_URL}" style="background:#4d8eff;color:#0d1117;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Get Day84</a>
+          <a href="${APP_DOWNLOAD_URL}" style="background:#000000;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Get Day84</a>
         </p>
-        <p>Already have the app? <a href="${acceptLink}">Tap here to link with ${inviterName}</a>.</p>
+        <p>Already have the app? Open <strong>Settings → Accountability partners</strong>, tap <strong>Enter invite code</strong> and paste this code:</p>
+        <p style="font-family: ui-monospace, Menlo, monospace; font-size: 16px; letter-spacing: 1px; background:#f2f2f2; padding:12px 16px; border-radius:8px; word-break: break-all;">${token}</p>
+        <p>Or <a href="${acceptLink}">tap here to link with ${inviterName}</a>.</p>
         <p style="color:#888;font-size:12px;">This invite was sent because ${inviterName} entered your email address in their Day84 app. If you weren't expecting this, you can safely ignore it — the link expires in 7 days.</p>
       </div>
     `,
@@ -50,7 +52,7 @@ export async function sendInviteEmail({ inviterName, token, recipientEmail }) {
     console.log(`  Subject: ${message.subject}`);
     console.log(`  Accept link: ${APP_WEB_BASE}/invite/${token}`);
     console.log(`  Download link: ${APP_DOWNLOAD_URL}\n`);
-    return { status: "sent", devMode: true };
+    return { status: "sent", sent: false, devMode: true };
   }
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -67,5 +69,5 @@ export async function sendInviteEmail({ inviterName, token, recipientEmail }) {
     throw new Error(`Email send failed (${res.status}): ${errBody}`);
   }
 
-  return { status: "sent", devMode: false };
+  return { status: "sent", sent: true, devMode: false };
 }

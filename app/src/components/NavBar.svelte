@@ -2,11 +2,10 @@
   import { SCREENS, showScreen, routerState } from "../stores/router.svelte.js";
   const router = routerState();
   const items = [
-    { id: SCREENS.DASHBOARD, icon: "◷", label: "Home" },
-    { id: SCREENS.TODAY,     icon: "☑", label: "Today" },
-    { id: SCREENS.GOALS,     icon: "◎", label: "Goals" },
-    { id: SCREENS.VISION,    icon: "✦", label: "Vision" },
-    { id: SCREENS.SETTINGS,  icon: "⚙", label: "Settings" },
+    { id: SCREENS.DASHBOARD, label: "Home" },
+    { id: SCREENS.GOALS,     label: "Goals" },
+    { id: SCREENS.VISION,    label: "Vision" },
+    { id: SCREENS.SETTINGS,  label: "Settings" },
   ];
 </script>
 
@@ -18,7 +17,6 @@
       onclick={() => showScreen(item.id)}
       aria-current={router.screen === item.id ? "page" : undefined}
     >
-      <span class="icon" aria-hidden="true">{item.icon}</span>
       <span class="label">{item.label}</span>
     </button>
   {/each}
@@ -35,21 +33,19 @@
     height: calc(var(--nav-height) + var(--safe-bottom));
     padding-bottom: var(--safe-bottom);
     display: flex;
-    background: var(--bg-elevated);
+    background: var(--bg);
     border-top: 1px solid var(--border);
     z-index: 30;
   }
   .nav-item {
     flex: 1;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
     color: var(--ink-faint);
     transition: color var(--duration-fast) var(--ease-out);
   }
-  .nav-item.active { color: var(--accent); }
-  .icon { font-size: var(--text-lg); line-height: 1; }
-  .label { font-size: 10px; font-weight: 500; letter-spacing: 0.02em; }
+  .nav-item.active { color: var(--ink); }
+  .label { font-size: 12px; font-weight: 500; }
+  .nav-item.active .label { font-weight: 600; }
 </style>

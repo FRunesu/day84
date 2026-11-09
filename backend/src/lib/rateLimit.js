@@ -1,34 +1,28 @@
 /**
  * Day84 Backend — Rate Limiting
  * ------------------------------------------------------------------
- * Per the security checklist: the invite-sending endpoint must be
- * rate-limited, or it becomes an open door for someone to spam
- * arbitrary email addresses through Day84's sending domain — which
- * gets that domain blacklisted by email providers, independent of
- * any direct cost.
- *
- * This is an in-memory limiter, which is fine for a single backend
- * instance. If this is ever deployed across multiple instances
- * (horizontal scaling), swap the Map below for a shared store
- * (e.g. Redis) so limits are enforced globally, not per-instance.
+ * In-memory per-IP limiter. Fine for a single instance; swap the Map
+ * for a shared store (Redis) if this is ever scaled horizontally.
  */
 
-const WINDOW_MS = 60 * 60 * 1000; // 1 hour
-const MAX_REQUESTS = 5; // 5 invite sends per IP per hour
-
-const hits = new Map(); // ip -> [timestamps]
-
-export function rateLimit(req, res, next) {
-  const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
-  const now = Date.now();
-  const windowStart = now - WINDOW_MS;
-
-  const existing = (hits.get(ip) || []).filter((t) => t > windowStart);
-  if (existing.length >= MAX_REQUESTS) {
-    return res.status(429).json({ error: "Too many invite requests. Try again later." });
-  }
-
-  existing.push(now);
-  hits.set(ip, existing);
-  next();
+export function makeRateLimit({ max, windowMs, message }) {
+  const hits = new Map(); // ip -> [timestamps]
+  return function rateLimit(req, res, next) {
+    const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
+    const now = Date.now();
+    const existing = (hits.get(ip) || []).filter((t) => t > now - windowMs);
+    if (existing.length >= max) {
+      return res.status(429).json({ error: message || "Too many requests. Try again later." });
+    }
+    existing.push(now);
+    hits.set(ip, existing);
+    next();
+  };
 }
+
+// 20 invite sends per IP per hour — protects the sending domain.
+export const rateLimit = makeRateLimit({
+  max: 20,
+  windowMs: 60 * 60 * 1000,
+  message: "Too many invite requests. Try again later.",
+});

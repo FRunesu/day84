@@ -1,0 +1,23 @@
+# One-click deploy of the Day84 backend on Render (https://render.com).
+# After deploying, paste the service URL into the app: Settings → Sync server.
+services:
+  - type: web
+    name: day84-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: node src/index.js
+    healthCheckPath: /health
+    disk:
+      name: day84-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: APP_WEB_BASE
+        sync: false

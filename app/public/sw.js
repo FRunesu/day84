@@ -15,7 +15,7 @@
  * lib/api.js) when there's no connection.
  */
 
-const CACHE_NAME = "day84-shell-v1";
+const CACHE_NAME = "day84-shell-v2";
 
 // Vite fingerprints build output (e.g. /assets/index-AbCd123.js), so
 // the exact filenames aren't known ahead of time. We precache the
@@ -47,7 +47,8 @@ self.addEventListener("fetch", (event) => {
   // always be fresh, and caching it would be a privacy footgun
   // (stale partner data displayed as current).
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith("/invite") || url.pathname.startsWith("/sync") || url.pathname.startsWith("/link") || url.pathname.startsWith("/account")) {
+  if (url.origin !== self.location.origin) return; // the backend lives on another origin
+  if (url.pathname.startsWith("/invite") || url.pathname.startsWith("/sync") || url.pathname.startsWith("/link") || url.pathname.startsWith("/account") || url.pathname.startsWith("/push")) {
     return;
   }
 
