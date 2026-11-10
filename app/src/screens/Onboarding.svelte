@@ -182,7 +182,7 @@
 
     <!-- Step 0: Age -->
     {#if current.key === "age"}
-      <p class="copy">Day84 is for ages 13 and up. By continuing you agree to our Terms of Service and Privacy Policy.</p>
+      <p class="copy">Anvil is for ages 13 and up. By continuing you agree to our Terms of Service and Privacy Policy.</p>
       <label class="check-row">
         <input type="checkbox" bind:checked={ageConfirmed} />
         <span>I confirm I am 13 or older</span>

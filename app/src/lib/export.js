@@ -43,7 +43,7 @@ export async function downloadBackup() {
  */
 export async function restoreFromBackup(payload) {
   if (!payload || typeof payload !== "object" || !payload.data) {
-    throw new Error("That file doesn't look like a Day84 backup.");
+    throw new Error("That file doesn't look like a Anvil backup.");
   }
   for (const key of KEYS) {
     if (payload.data[key] !== undefined && payload.data[key] !== null) {
