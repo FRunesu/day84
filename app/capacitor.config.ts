@@ -16,7 +16,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "com.day84.app",
-  appName: "Day84",
+  appName: "Anvil",
   webDir: "dist",
   backgroundColor: "#000000",
   ios: {

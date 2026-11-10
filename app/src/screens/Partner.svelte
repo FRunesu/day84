@@ -62,8 +62,8 @@
 
   {#if !partner.subscriptionActive}
     <div class="card">
-      <p class="lead">Accountability partners are a Day84 Plus feature.</p>
-      <p class="mut">Linking with partners needs a small always-on server (to send invites and sync progress). That's the one part of Day84 with running costs, so it's the one part behind the subscription.</p>
+      <p class="lead">Accountability partners are a Anvil Plus feature.</p>
+      <p class="mut">Linking with partners needs a small always-on server (to send invites and sync progress). That's the one part of Anvil with running costs, so it's the one part behind the subscription.</p>
       <button class="btn" onclick={() => showScreen(SCREENS.PAYWALL)}>See plans</button>
     </div>
   {:else}
@@ -86,7 +86,7 @@
     {#if partner.canAddMore}
       <div class="card">
         <div class="lbl">Invite a partner</div>
-        <p class="mut" style="margin:0">They get an invite code to enter in their Day84 app. We email it to them when email is set up; you can also copy and send it yourself.</p>
+        <p class="mut" style="margin:0">They get an invite code to enter in their Anvil app. We email it to them when email is set up; you can also copy and send it yourself.</p>
         <input type="email" placeholder="partner@email.com" bind:value={email} />
         {#if sendError}<p class="err">{sendError}</p>{/if}
         {#if sentInvite}

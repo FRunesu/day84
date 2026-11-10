@@ -21,8 +21,8 @@
     <button class="back-btn" onclick={() => showScreen(SCREENS.PARTNER)} aria-label="Back">← Back</button>
   </header>
 
-  <h1>Day84 Plus</h1>
-  <p class="lead">Everything in Day84 is free and works fully offline — tasks, streaks, your cycle dashboard, and metrics. Plus adds one thing: a linked accountability partner.</p>
+  <h1>Anvil Plus</h1>
+  <p class="lead">Everything in Anvil is free and works fully offline — tasks, streaks, your cycle dashboard, and metrics. Plus adds one thing: a linked accountability partner.</p>
 
   <ul class="feature-list">
     <li>Invite a real accountability partner by email</li>

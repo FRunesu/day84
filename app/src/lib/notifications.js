@@ -57,7 +57,7 @@ export async function scheduleWeeklyReview(settings) {
     await plugin.schedule({
       notifications: [{
         id: WEEKLY_REVIEW_ID,
-        title: "Day84 — Weekly Review",
+        title: "Anvil — Weekly Review",
         body: "New week ahead. Take 5 minutes to review your tactics and set your plan.",
         schedule: {
           on: { weekday: jsToCapacitorWeekday(jsWeekday), hour, minute },
@@ -86,7 +86,7 @@ export async function scheduleTacticAlerts(tactics) {
         const id = hashId(tactic.id + "-" + jsDay);
         toSchedule.push({
           id,
-          title: "Day84 — Task Starting",
+          title: "Anvil — Task Starting",
           body: `Time to start: ${tactic.title}`,
           schedule: {
             on: { weekday: jsToCapacitorWeekday(jsDay), hour, minute },
@@ -120,7 +120,7 @@ export async function scheduleDoubleMissAlert(tacticName) {
     await plugin.schedule({
       notifications: [{
         id,
-        title: "Day84 — Don't Break the Chain",
+        title: "Anvil — Don't Break the Chain",
         body: `You've missed "${tacticName}" twice in a row. Don't let this become a habit.`,
         schedule: { at: new Date(Date.now() + 1000) }, // fire immediately
         channelId: "warnings",

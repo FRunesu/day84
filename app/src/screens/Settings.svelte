@@ -110,7 +110,7 @@
     <h2>Accountability</h2>
     <button class="nav-row" onclick={() => showScreen(SCREENS.PARTNER)}>
       <span>Accountability partners</span>
-      <span class="sub">{partner.subscriptionActive ? `${partner.partners.length} linked ›` : "Day84 Plus ›"}</span>
+      <span class="sub">{partner.subscriptionActive ? `${partner.partners.length} linked ›` : "Anvil Plus ›"}</span>
     </button>
     {#if partner.subscriptionActive}
       <label class="field-col">
