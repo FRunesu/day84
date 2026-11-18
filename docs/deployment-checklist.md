@@ -4,7 +4,7 @@ Concrete steps to take this from "runs on my machine" to "live on the App Store 
 
 ## 1. Backend — get it running somewhere real
 
-- [ ] Swap `backend/src/lib/db.js`'s JSON-file storage for a real Postgres database. `backend/schema.sql` is the matching schema — every function in `db.js` is already a small, named async unit, so this is a mechanical swap (or use Prisma/Drizzle if you'd rather not hand-write SQL).
+- [x] Postgres storage: set `DATABASE_URL` (e.g. a free Neon database) and the backend stores everything there; tables from `backend/schema.sql` are created on startup. Without it, a local JSON file is used (development only).
 - [ ] Deploy the backend somewhere that gives you a stable URL — Railway, Render, Fly.io, or a small VPS all work fine for this size of service. It's a single Express app with no exotic dependencies.
 - [ ] Confirm your database provider encrypts data at rest (most managed Postgres — RDS, Supabase, Neon — do this by default; just check the box exists and is on).
 - [ ] Set up HTTPS (virtually every PaaS above does this automatically via their own domain or a custom domain + Let's Encrypt).
