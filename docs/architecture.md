@@ -39,7 +39,7 @@ Everything else in Day84 works fully offline. The backend exists for exactly one
 
 **Account deletion cascades in one operation.** `deleteAccountCascade()` in `lib/db.js` removes a user's shared-data record *and* their partner link in the same call — there's no intermediate state where a deleted user's data is still readable by a former partner.
 
-The backend's data layer (`lib/db.js`) is a JSON file for zero-dependency local development. `schema.sql` documents the equivalent production Postgres schema — every exported function in `db.js` is already a small async unit, so swapping the implementation for real SQL queries (or an ORM) doesn't require touching any route or frontend code.
+The backend's data layer (`lib/db.js`) uses Postgres (`lib/db-pg.js`, schema in `schema.sql`, created on startup) when `DATABASE_URL` is set, and a local JSON file (`lib/db-json.js`) otherwise for zero-setup development. Both export the same functions, so routes don't depend on which one is active.
 
 ## Native wrapping
 

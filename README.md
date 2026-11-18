@@ -69,7 +69,6 @@ Built and verified working:
 
 Deliberately stubbed, with the real integration point documented in `docs/deployment-checklist.md`:
 - Subscription purchases (Paywall screen simulates success locally — wire RevenueCat/StoreKit/Play Billing)
-- The backend's data store (JSON file for zero-setup dev/demo — swap for Postgres using `backend/schema.sql`)
 - Push notifications for task reminders (not in the original spec, but a natural next addition — not built)
 
 ## Legal — read this before launching

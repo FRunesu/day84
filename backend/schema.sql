@@ -1,51 +1,53 @@
--- Day84 — Production Database Schema (Postgres)
+-- Anvil — Postgres schema
 -- ------------------------------------------------------------------
--- The running backend in this project (src/lib/db.js) uses a JSON
--- file so the whole thing works with zero setup. This file is the
--- schema you'd actually run in production — point src/lib/db.js's
--- exports at real queries against this schema (or use an ORM like
--- Prisma/Drizzle) before shipping. The shape matches db.js's data
--- model exactly so the swap is mechanical, not a redesign.
+-- Run automatically on startup by src/lib/db-pg.js when DATABASE_URL
+-- is set; every statement is idempotent. Mirrors the JSON store in
+-- src/lib/db-json.js.
 
-CREATE TABLE invites (
-  id            TEXT PRIMARY KEY,
-  token         TEXT UNIQUE NOT NULL,
-  inviter_id    TEXT NOT NULL,
-  inviter_name  TEXT NOT NULL,
-  recipient_email TEXT NOT NULL,
-  status        TEXT NOT NULL CHECK (status IN ('pending', 'sent', 'failed', 'accepted')),
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  expires_at    TIMESTAMPTZ NOT NULL
+CREATE TABLE IF NOT EXISTS invites (
+  id               TEXT PRIMARY KEY,
+  token            TEXT UNIQUE NOT NULL,
+  inviter_id       TEXT NOT NULL,
+  inviter_name     TEXT NOT NULL,
+  recipient_email  TEXT NOT NULL,
+  status           TEXT NOT NULL CHECK (status IN ('pending', 'sent', 'failed', 'accepted')),
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at       TIMESTAMPTZ NOT NULL,
+  accepted_by_id   TEXT,
+  accepted_by_name TEXT
 );
 
-CREATE INDEX idx_invites_token ON invites (token);
+CREATE INDEX IF NOT EXISTS idx_invites_inviter ON invites (inviter_id);
 
-CREATE TABLE links (
+-- One row per partnership; each user can be in up to MAX_PARTNERS rows.
+CREATE TABLE IF NOT EXISTS links (
   id          TEXT PRIMARY KEY,
   user_a_id   TEXT NOT NULL,
+  user_a_name TEXT,
   user_b_id   TEXT NOT NULL,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (user_a_id),
-  UNIQUE (user_b_id)
+  user_b_name TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- One row per user holding the data they've opted to sync, plus
--- their own sharing preferences. Filtering by sharePrefs happens in
--- application code at read time (see routes/sync.js) — never trust
--- a client to have already filtered this for you.
-CREATE TABLE shared_data (
-  user_id           TEXT PRIMARY KEY,
-  share_streaks     BOOLEAN NOT NULL DEFAULT true,
-  share_cycle_progress BOOLEAN NOT NULL DEFAULT true,
-  share_goal_text   BOOLEAN NOT NULL DEFAULT false,
-  share_vision_text BOOLEAN NOT NULL DEFAULT false,
-  streaks           INTEGER,
-  cycle_progress    NUMERIC(5,2),
-  goal_text         TEXT,
-  vision_text       TEXT,
-  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE UNIQUE INDEX IF NOT EXISTS idx_links_pair ON links (LEAST(user_a_id, user_b_id), GREATEST(user_a_id, user_b_id));
+CREATE INDEX IF NOT EXISTS idx_links_a ON links (user_a_id);
+CREATE INDEX IF NOT EXISTS idx_links_b ON links (user_b_id);
+
+-- The user's latest sync payload (including their sharePrefs).
+-- Filtering by sharePrefs happens at read time in routes/sync.js.
+CREATE TABLE IF NOT EXISTS shared_data (
+  user_id    TEXT PRIMARY KEY,
+  data       JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Recommended: enable encryption at rest at the database/volume
--- level (most managed Postgres providers — RDS, Supabase, Neon,
--- Cloud SQL — do this by default; just confirm it's on).
+-- Pending "Push <partner>" nudges; deleted once delivered.
+CREATE TABLE IF NOT EXISTS pushes (
+  id         TEXT PRIMARY KEY,
+  from_id    TEXT NOT NULL,
+  from_name  TEXT,
+  to_id      TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pushes_to ON pushes (to_id);
